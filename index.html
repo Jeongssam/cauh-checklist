@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>중대부고 체크리스트 목록</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background: linear-gradient(135deg, #006994 0%, #0099cc 50%, #66ccff 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding-top: 40px;
+        }
+        
+        h1 {
+            color: white;
+            text-align: center;
+            font-size: 2.5em;
+            margin-bottom: 50px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+        }
+        
+        .checklist-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 20px;
+        }
+        
+        .checklist-card {
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            text-align: center;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            transition: transform 0.2s, box-shadow 0.2s;
+            cursor: pointer;
+            text-decoration: none;
+            color: inherit;
+            display: block;
+        }
+        
+        .checklist-card.disabled {
+            background: #f5f5f5;
+            cursor: not-allowed;
+            opacity: 0.7;
+        }
+        
+        .checklist-card:not(.disabled):hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 15px rgba(0,0,0,0.2);
+        }
+        
+        .checklist-card.disabled:hover {
+            transform: none;
+        }
+        
+        .checklist-icon {
+            font-size: 3em;
+            margin-bottom: 15px;
+        }
+        
+        .checklist-title {
+            font-size: 1.3em;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 10px;
+        }
+        
+        .checklist-description {
+            font-size: 0.9em;
+            color: #666;
+            line-height: 1.5;
+        }
+        
+        .coming-soon {
+            display: inline-block;
+            background: #ffc107;
+            color: #333;
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 0.85em;
+            font-weight: 600;
+            margin-top: 10px;
+        }
+        
+        .survey-period {
+            font-size: 0.85em;
+            color: #0099cc;
+            font-weight: 500;
+            margin-top: 8px;
+        }
+        
+        .department {
+            font-size: 0.85em;
+            color: #666;
+            margin-top: 5px;
+        }
+        
+        @media (max-width: 600px) {
+            h1 {
+                font-size: 1.8em;
+                margin-bottom: 30px;
+            }
+            
+            .checklist-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .checklist-card {
+                padding: 25px;
+            }
+            
+            .checklist-icon {
+                font-size: 2.5em;
+            }
+        }
+        
+        @media (min-width: 601px) and (max-width: 900px) {
+            .checklist-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+        
+        @media (min-width: 901px) {
+            .checklist-grid {
+                grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>⚠️ 중대부고 체크리스트 목록</h1>
+        
+        <div class="checklist-grid">
+            <a href="https://jeongssam.github.io/cauh-checklist/checklist(20250930).html" class="checklist-card">
+                <div class="checklist-icon">📋</div>
+                <div class="checklist-title">평가관련연수이수현황조사</div>
+                <div class="department">업무: 평가계</div>
+                <div class="survey-period">조사시기: 2025</div>
+            </a>
+            
+            <div class="checklist-card disabled">
+                <div class="checklist-icon">✅</div>
+                <div class="checklist-title">체크리스트 2</div>
+                <div class="checklist-description">두 번째 중대부고 체크리스트</div>
+                <span class="coming-soon">준비중</span>
+            </div>
+            
+            <div class="checklist-card disabled">
+                <div class="checklist-icon">📝</div>
+                <div class="checklist-title">체크리스트 3</div>
+                <div class="checklist-description">세 번째 중대부고 체크리스트</div>
+                <span class="coming-soon">준비중</span>
+            </div>
+            
+            <div class="checklist-card disabled">
+                <div class="checklist-icon">🔍</div>
+                <div class="checklist-title">체크리스트 4</div>
+                <div class="checklist-description">네 번째 중대부고 체크리스트</div>
+                <span class="coming-soon">준비중</span>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
