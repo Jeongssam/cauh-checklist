@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>중대부고 학생평가 연수 현황 조사</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .status-cell { cursor: pointer; transition: background-color 0.2s; }
+        .status-cell:hover { background-color: #f3f4f6; }
+        .status-cell.locked { cursor: not-allowed; }
+        .status-cell.locked:hover { background-color: transparent; }
+        .temp-dropdown { min-width: 120px; padding: 4px 8px; border: 1px solid #3b82f6; border-radius: 4px; background-color: white; font-size: 14px; z-index: 10; position: relative; }
+        .online-indicator { position: fixed; top: 20px; right: 20px; background: white; padding: 8px 16px; border-radius: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); display: flex; align-items: center; gap: 8px; z-index: 100; }
+        .online-dot { width: 8px; height: 8px; background: #22c55e; border-radius: 50%; animation: pulse 2s infinite; }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+    </style>
+</head>
+<body class="min-h-screen bg-gray-50">
+    <div class="online-indicator">
+        <div class="online-dot"></div>
+        <span class="text-sm text-gray-700">실시간 동기화 중</span>
+    </div>
+    
+    <div class="max-w-7xl mx-auto p-6">
+        <div class="bg-white rounded-lg shadow-sm p-6 mb-6">
+            <div class="flex justify-between items-start mb-4">
+                <h1 class="text-2xl font-bold text-gray-900">중대부고 학생평가 관련 연수 이수 현황 조사</h1>
+                <div class="flex items-center gap-3">
+                    <span id="adminBadge" class="px-3 py-1 rounded-full text-sm font-medium bg-red-100 text-red-800 hidden">관리자 모드</span>
+                    <button id="adminBtn" class="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors text-sm">관리자 로그인</button>
+                    <button id="logoutBtn" class="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors text-sm hidden">관리자 로그아웃</button>
+                </div>
+            </div>
+            <div class="space-y-2 text-sm text-gray-750">
+                <div class="flex items-center gap-2"><span>📅 <strong>제출 기한: 2026.2.2(월)</strong>까지</span></div>
+                <div>✅ <strong>제출 내용: <span style="text-decoration: underline;">4년간(22학년도~25학년도) 학생평가 관련 직무연수</span></strong>(성취평가, 서논술형 평가, 과정중심 평가, NCS 평가 등 나이스 등재된 연수) <strong>30시간 이상</strong> 이수 현황</div>
+                <div>👥 연수 대상: 고등학교 교원 전체(교장, 교감, 비교과교사, 특수교사, 기간제교사, 휴직교사 제외)</div>
+                <div class="mt-3 p-3 bg-blue-50 rounded-lg border-l-4 border-blue-500">
+                    <div class="text-blue-800 font-medium">📝 안내사항</div>
+                    <div class="text-blue-700 text-sm mt-1">• 4년간 학교평가 관련 연수를 <span style="text-decoration: underline;">30시간 이상 이수</span>하신 분들께서는 <span style="text-decoration: underline;">2025학년도 목록</span>에 <strong>완료</strong>를 입력하시면 됩니다.<br>• <span style="text-decoration: underline;">전년도 설문조사에서 이수 결과를 제출하신 분들</span>은 이미 <span style="text-decoration: underline;">완료로 표시</span>되어 있습니다.<br>•  본인의 연수 내역 확인 후 수정이 필요한 선생님께서는 평가계(📞291)로 연락 주세요<br>• 2026.02.02. 기준으로 2026.02.28.까지 이수 예정이신 분들은 <strong>진행중</strong>으로 표시해 주세요. 추후 교육청 보고 전 재확인하겠습니다.</div>
+                </div>
+            </div>
+        </div>
+        <div class="bg-white rounded-lg shadow-sm p-6 mb-6">
+            <div class="flex flex-wrap gap-4 items-center">
+                <div class="flex items-center gap-2"><span>🔍</span><input type="text" id="searchInput" placeholder="교사명 검색..." class="px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"></div>
+                <div class="flex items-center gap-2"><span>🔽</span><select id="filterSelect" class="px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"><option value="전체">전체</option><option value="완료">완료</option><option value="미완료">미완료</option></select></div>
+                <button id="statsBtn" class="flex items-center gap-2 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors">📊 통계 보기</button>
+                <button id="exportBtn" class="flex items-center gap-2 px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors hidden">📥 CSV 내보내기</button>
+            </div>
+            <div id="adminSection" class="flex gap-2 mt-4 p-4 bg-red-50 rounded-lg border-l-4 border-red-500 hidden">
+                <div class="flex-1"><p class="text-sm font-medium text-red-800 mb-2">관리자 전용 기능</p><div class="flex gap-2"><input type="text" id="newTeacherInput" placeholder="새 교사 이름..." class="px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500"><button id="addTeacherBtn" class="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors">교사 추가</button></div></div>
+            </div>
+        </div>
+        <div id="statsPanel" class="bg-white rounded-lg shadow-sm p-6 mb-6 hidden">
+            <h2 class="text-lg font-semibold mb-4">이수 현황 통계</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="bg-gradient-to-br from-blue-50 to-orange-50 p-6 rounded-lg">
+                    <div class="text-sm font-semibold text-gray-700 mb-4 text-center">2025학년도 연수 현황</div>
+                    <div class="flex items-center justify-center gap-8">
+                        <canvas id="mainChart" width="260" height="260"></canvas>
+                        <div class="bg-white/90 rounded-lg shadow-md overflow-hidden">
+                            <table class="min-w-[180px]">
+                                <thead>
+                                    <tr class="bg-blue-500">
+                                        <th class="px-6 py-3 text-white text-sm font-semibold">구분</th>
+                                        <th class="px-6 py-3 text-white text-sm font-semibold">인원</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr class="border-b border-blue-100 bg-blue-50">
+                                        <td class="px-6 py-3 text-sm font-medium text-gray-700">연수대상</td>
+                                        <td class="px-6 py-3 text-right">
+                                            <span class="text-xl font-bold text-blue-600" id="totalStat">37</span>
+                                            <span class="text-xs text-gray-500 ml-1">명</span>
+                                        </td>
+                                    </tr>
+                                    <tr class="border-b border-gray-100 hover:bg-green-50 transition-colors">
+                                        <td class="px-6 py-2 text-sm text-gray-700 flex items-center gap-2">
+                                            <span class="w-3 h-3 bg-green-500 rounded-full"></span>
+                                            완료
+                                        </td>
+                                        <td class="px-6 py-2 text-right">
+                                            <span class="text-lg font-bold text-green-600" id="completed25Stat">0</span>
+                                            <span class="text-xs text-gray-500 ml-1">명</span>
+                                        </td>
+                                    </tr>
+                                    <tr class="border-b border-gray-100 hover:bg-yellow-50 transition-colors">
+                                        <td class="px-6 py-2 text-sm text-gray-700 flex items-center gap-2">
+                                            <span class="w-3 h-3 bg-yellow-500 rounded-full"></span>
+                                            진행중
+                                        </td>
+                                        <td class="px-6 py-2 text-right">
+                                            <span class="text-lg font-bold text-yellow-600" id="inProgress25Stat">0</span>
+                                            <span class="text-xs text-gray-500 ml-1">명</span>
+                                        </td>
+                                    </tr>
+                                    <tr class="hover:bg-gray-50 transition-colors">
+                                        <td class="px-6 py-2 text-sm text-gray-700 flex items-center gap-2">
+                                            <span class="w-3 h-3 bg-gray-400 rounded-full"></span>
+                                            미완료
+                                        </td>
+                                        <td class="px-6 py-2 text-right">
+                                            <span class="text-lg font-bold text-gray-600" id="incomplete25Stat">0</span>
+                                            <span class="text-xs text-gray-500 ml-1">명</span>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+                <div class="flex flex-col justify-center gap-4">
+                    <div class="bg-purple-50 p-6 rounded-lg border-l-4 border-purple-500">
+                        <div class="text-sm text-purple-600 font-medium mb-3">📊 참고자료</div>
+                        <div class="space-y-4">
+                            <div>
+                                <div class="text-xs text-gray-500 mb-1">• 2024학년도 본교 연수 이수 달성율</div>
+                                <div class="flex items-end gap-2">
+                                    <div class="text-3xl font-bold text-purple-600" id="rate24Stat">0%</div>
+                                    <div class="text-sm text-gray-600 mb-1">(전체 43명 기준)</div>
+                                </div>
+                            </div>
+                            <div class="border-t border-purple-200 pt-3">
+                                <div class="text-xs text-gray-500 mb-2">• 2025학년도 서울특별시교육청 설정 목표</div>
+                                <div class="bg-white p-3 rounded">
+                                    <div class="text-sm text-gray-700">✓ 4년간(22~25학년도) 학생평가 관련 연수 30시간 이상 이수율 100% 달성</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="bg-white rounded-lg shadow-sm overflow-hidden">
+            <div class="overflow-x-auto">
+                <table class="w-full">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">연번</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">연수대상</th>
+                            <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">2024학년도 이수 여부<div class="text-xs font-normal text-gray-400 mt-1">(조사완료)</div></th>
+                            <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">2025학년도 이수 여부<br><div class="text-xs font-normal text-green-600 mt-1">(조사중)</div></th>
+                            <th id="adminColumn" class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider hidden">관리</th>
+                        </tr>
+                    </thead>
+                    <tbody id="teacherTableBody" class="bg-white divide-y divide-gray-200"></tbody>
+                </table>
+            </div>
+        </div>
+        <div class="mt-6 text-center text-sm text-gray-500"><span id="teacherCount">이 37명의 교사가 표시됩니다.</span><span id="adminFooter" class="ml-4 text-red-600 hidden">관리자 모드: 교사 추가/삭제, CSV 내보내기 가능</span></div>
+    </div>
+    <div id="adminModal" class="fixed inset-0 bg-black bg-opacity-50 items-center justify-center p-4 z-50 hidden">
+        <div class="bg-white rounded-lg shadow-lg p-6 w-full max-w-sm"><h2 class="text-lg font-bold text-center mb-4">관리자 인증</h2><div><input type="password" id="passwordInput" placeholder="관리자 비밀번호 입력" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 mb-4"><div class="flex gap-2"><button id="cancelBtn" class="flex-1 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors">취소</button><button id="confirmBtn" class="flex-1 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors">확인</button></div></div></div>
+    </div>
+    <script>
+        var isAdmin=false,currentEditingCell=null,editingTeacherId=null,editingYear=null;
+        var teachers = [];
+        var ADMIN_PASSWORD='0924';
+        var STORAGE_KEY = 'cauh_checklist_data_v1';
+        
+        var elements={adminBtn:document.getElementById('adminBtn'),logoutBtn:document.getElementById('logoutBtn'),adminBadge:document.getElementById('adminBadge'),adminSection:document.getElementById('adminSection'),adminModal:document.getElementById('adminModal'),passwordInput:document.getElementById('passwordInput'),cancelBtn:document.getElementById('cancelBtn'),confirmBtn:document.getElementById('confirmBtn'),searchInput:document.getElementById('searchInput'),filterSelect:document.getElementById('filterSelect'),statsBtn:document.getElementById('statsBtn'),statsPanel:document.getElementById('statsPanel'),exportBtn:document.getElementById('exportBtn'),teacherTableBody:document.getElementById('teacherTableBody'),newTeacherInput:document.getElementById('newTeacherInput'),addTeacherBtn:document.getElementById('addTeacherBtn'),teacherCount:document.getElementById('teacherCount'),adminFooter:document.getElementById('adminFooter'),adminColumn:document.getElementById('adminColumn')};
+        
+        function initializeData() {
+            var savedData = localStorage.getItem(STORAGE_KEY);
+            if (savedData) {
+                try {
+                    teachers = JSON.parse(savedData);
+                } catch(e) {
+                    loadDefaultData();
+                }
+            } else {
+                loadDefaultData();
+            }
+        }
+        
+        function loadDefaultData() {
+            teachers=[{id:1,name:'김상철',status24:'',status25:''},{id:2,name:'김유진',status24:'',status25:''},{id:3,name:'김지윤',status24:'',status25:''},{id:4,name:'김태준',status24:'',status25:''},{id:5,name:'김후정',status24:'',status25:''},{id:6,name:'노이용',status24:'',status25:''},{id:7,name:'류림호',status24:'',status25:''},{id:8,name:'류인후',status24:'',status25:''},{id:9,name:'박석재',status24:'완료',status25:'완료'},{id:10,name:'박은정',status24:'',status25:''},{id:11,name:'박정득',status24:'완료',status25:'완료'},{id:12,name:'백상호',status24:'',status25:''},{id:13,name:'서경신',status24:'완료',status25:'완료'},{id:14,name:'손왕헌',status24:'완료',status25:'완료'},{id:15,name:'송병호',status24:'',status25:''},{id:16,name:'송진석',status24:'완료',status25:'완료'},{id:17,name:'신동진',status24:'',status25:''},{id:18,name:'신지윤',status24:'',status25:''},{id:19,name:'오상우',status24:'',status25:''},{id:20,name:'이동근',status24:'',status25:''},{id:21,name:'이석빈',status24:'',status25:''},{id:22,name:'이승환',status24:'',status25:''},{id:23,name:'이웅수',status24:'',status25:''},{id:24,name:'이은주',status24:'완료',status25:'완료'},{id:25,name:'이재청',status24:'',status25:''},{id:26,name:'이혜정',status24:'완료',status25:'완료'},{id:27,name:'임수아',status24:'',status25:''},{id:28,name:'전승원',status24:'완료',status25:'완료'},{id:29,name:'정나은',status24:'',status25:''},{id:30,name:'정은선',status24:'완료',status25:'완료'},{id:31,name:'정형진',status24:'완료',status25:'완료'},{id:32,name:'조현진',status24:'',status25:''},{id:33,name:'최미르',status24:'완료',status25:'완료'},{id:34,name:'최미연',status24:'완료',status25:'완료'},{id:35,name:'최승만',status24:'완료',status25:'완료'},{id:36,name:'허충범',status24:'완료',status25:'완료'},{id:37,name:'형보윤',status24:'',status25:''}];
+            saveData();
+        }
+        
+        function saveData() {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(teachers));
+            window.dispatchEvent(new Event('storage'));
+        }
+        
+        function setupEventListeners(){
+            elements.adminBtn.addEventListener('click',showAdminModal);
+            elements.logoutBtn.addEventListener('click',logout);
+            elements.confirmBtn.addEventListener('click',handleAdminLogin);
+            elements.cancelBtn.addEventListener('click',hideAdminModal);
+            elements.passwordInput.addEventListener('keypress',function(e){if(e.key==='Enter')handleAdminLogin()});
+            elements.searchInput.addEventListener('input',renderTable);
+            elements.filterSelect.addEventListener('change',renderTable);
+            elements.statsBtn.addEventListener('click',toggleStats);
+            elements.exportBtn.addEventListener('click',exportToCSV);
+            elements.addTeacherBtn.addEventListener('click',addTeacher);
+            elements.newTeacherInput.addEventListener('keypress',function(e){if(e.key==='Enter')addTeacher()});
+            elements.adminModal.addEventListener('click',function(e){if(e.target===elements.adminModal)hideAdminModal()});
+            document.addEventListener('click',function(e){if(currentEditingCell&&!currentEditingCell.contains(e.target))cancelEdit()});
+            
+            window.addEventListener('storage', function(e) {
+                if (e.key === STORAGE_KEY || e.key === null) {
+                    var savedData = localStorage.getItem(STORAGE_KEY);
+                    if (savedData) {
+                        try {
+                            teachers = JSON.parse(savedData);
+                            renderTable();
+                            updateStats();
+                        } catch(err) {}
+                    }
+                }
+            });
+            
+            setInterval(function() {
+                var savedData = localStorage.getItem(STORAGE_KEY);
+                if (savedData) {
+                    try {
+                        var newData = JSON.parse(savedData);
+                        if (JSON.stringify(newData) !== JSON.stringify(teachers)) {
+                            teachers = newData;
+                            renderTable();
+                            updateStats();
+                        }
+                    } catch(err) {}
+                }
+            }, 2000);
+        }
+        
+        function showAdminModal(){elements.adminModal.classList.remove('hidden');elements.adminModal.classList.add('flex');elements.passwordInput.focus()}
+        function hideAdminModal(){elements.adminModal.classList.add('hidden');elements.adminModal.classList.remove('flex');elements.passwordInput.value=''}
+        function handleAdminLogin(){var password=elements.passwordInput.value.trim();if(password===ADMIN_PASSWORD){isAdmin=true;hideAdminModal();updateAdminUI();alert('관리자 로그인 성공!')}else{alert('비밀번호가 올바르지 않습니다.');elements.passwordInput.value=''}}
+        function logout(){isAdmin=false;updateAdminUI()}
+        function updateAdminUI(){if(isAdmin){elements.adminBtn.classList.add('hidden');elements.logoutBtn.classList.remove('hidden');elements.adminBadge.classList.remove('hidden');elements.adminSection.classList.remove('hidden');elements.exportBtn.classList.remove('hidden');elements.adminFooter.classList.remove('hidden');elements.adminColumn.classList.remove('hidden')}else{elements.adminBtn.classList.remove('hidden');elements.logoutBtn.classList.add('hidden');elements.adminBadge.classList.add('hidden');elements.adminSection.classList.add('hidden');elements.exportBtn.classList.add('hidden');elements.adminFooter.classList.add('hidden');elements.adminColumn.classList.add('hidden')}renderTable()}
+        
+        function createStatusBadge(status){if(status==='완료')return'<span class="inline-flex items-center gap-1 px-2 py-1 bg-green-100 text-green-800 text-sm rounded">✓ 완료</span>';else if(status==='진행중')return'<span class="inline-flex items-center gap-1 px-2 py-1 bg-yellow-100 text-yellow-800 text-sm rounded">⚠ 진행중</span>';else if(status==='미완료')return'<span class="inline-flex items-center gap-1 px-2 py-1 bg-red-100 text-red-800 text-sm rounded">미완료</span>';return'<span class="text-gray-400 px-2 py-1 rounded">클릭하여 입력</span>'}
+        
+        function cancelEdit(){if(currentEditingCell){currentEditingCell=null;editingTeacherId=null;editingYear=null;renderTable()}}
+        
+        function saveStatus(teacherId,year,newValue){var teacher=teachers.find(function(t){return t.id===teacherId});if(teacher){teacher[year]=newValue;currentEditingCell=null;editingTeacherId=null;editingYear=null;saveData();renderTable();updateStats()}}
+        
+        function handleStatusClick(teacherId,year,cellElement){var canEdit=year==='status25'||(year==='status24'&&isAdmin);if(!canEdit)return;if(currentEditingCell){cancelEdit();return}var teacher=teachers.find(function(t){return t.id===teacherId});if(!teacher)return;currentEditingCell=cellElement;editingTeacherId=teacherId;editingYear=year;var select=document.createElement('select');select.className='temp-dropdown';var options=[{value:'',text:'-'},{value:'완료',text:'완료'},{value:'진행중',text:'진행중'},{value:'미완료',text:'미완료'}];for(var i=0;i<options.length;i++){var optionElement=document.createElement('option');optionElement.value=options[i].value;optionElement.textContent=options[i].text;if(options[i].value===teacher[year])optionElement.selected=true;select.appendChild(optionElement)}select.addEventListener('change',function(){saveStatus(teacherId,year,this.value)});select.addEventListener('keydown',function(e){if(e.key==='Escape')cancelEdit();e.stopPropagation()});select.addEventListener('click',function(e){e.stopPropagation()});cellElement.innerHTML='';cellElement.appendChild(select);select.focus()}
+        
+        function deleteTeacher(teacherId){if(confirm('정말 이 교사를 삭제하시겠습니까?')){teachers=teachers.filter(function(t){return t.id!==teacherId});saveData();renderTable();updateStats()}}
+        
+        function addTeacher(){var name=elements.newTeacherInput.value.trim();if(name){var maxId=0;for(var i=0;i<teachers.length;i++)if(teachers[i].id>maxId)maxId=teachers[i].id;teachers.push({id:maxId+1,name:name,status24:'',status25:''});elements.newTeacherInput.value='';saveData();renderTable();updateStats()}}
+        
+        function renderTable(){var searchTerm=elements.searchInput.value.toLowerCase();var statusFilter=elements.filterSelect.value;var filteredTeachers=teachers.filter(function(teacher){var matchesSearch=teacher.name.toLowerCase().indexOf(searchTerm)!==-1;if(statusFilter==='전체')return matchesSearch;if(statusFilter==='완료')return matchesSearch&&teacher.status25==='완료';if(statusFilter==='미완료')return matchesSearch&&teacher.status25!=='완료';return matchesSearch});var tbody=elements.teacherTableBody;tbody.innerHTML='';for(var i=0;i<filteredTeachers.length;i++){var teacher=filteredTeachers[i];var row=document.createElement('tr');row.className=i%2===0?'bg-white':'bg-gray-50';var status24Cell=document.createElement('td');status24Cell.className='px-6 py-4 whitespace-nowrap text-center';var status24Div=document.createElement('div');var canEdit24=isAdmin;status24Div.className=canEdit24?'status-cell px-3 py-1 rounded':'status-cell locked px-3 py-1 rounded';if(editingTeacherId!==teacher.id||editingYear!=='status24'){status24Div.innerHTML=teacher.status24?createStatusBadge(teacher.status24):'<span class="text-gray-400 px-2 py-1 rounded">'+(canEdit24?'클릭하여 입력':'미완료')+'</span>';if(canEdit24)(function(teacherId,year){status24Div.addEventListener('click',function(e){e.stopPropagation();handleStatusClick(teacherId,year,this)})})(teacher.id,'status24')}else status24Div=currentEditingCell;status24Cell.appendChild(status24Div);var status25Cell=document.createElement('td');status25Cell.className='px-6 py-4 whitespace-nowrap text-center';var status25Div=document.createElement('div');status25Div.className='status-cell px-3 py-1 rounded';if(editingTeacherId!==teacher.id||editingYear!=='status25'){status25Div.innerHTML=teacher.status25?createStatusBadge(teacher.status25):'<span class="text-gray-400 px-2 py-1 rounded">클릭하여 입력</span>';(function(teacherId,year){status25Div.addEventListener('click',function(e){e.stopPropagation();handleStatusClick(teacherId,year,this)})})(teacher.id,'status25')}else status25Div=currentEditingCell;status25Cell.appendChild(status25Div);row.innerHTML='<td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">'+teacher.id+'</td><td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">'+teacher.name+'</td>';row.appendChild(status24Cell);row.appendChild(status25Cell);if(isAdmin){var adminCell=document.createElement('td');adminCell.className='px-6 py-4 whitespace-nowrap text-center';var deleteBtn=document.createElement('button');deleteBtn.innerHTML='🗑️';deleteBtn.className='text-red-600 hover:text-red-800 transition-colors text-lg';deleteBtn.title='교사 삭제';(function(tId){deleteBtn.addEventListener('click',function(){deleteTeacher(tId)})})(teacher.id);adminCell.appendChild(deleteBtn);row.appendChild(adminCell)}tbody.appendChild(row)}elements.teacherCount.textContent='이 '+filteredTeachers.length+'명의 교사가 표시됩니다.'}
+        
+        function toggleStats(){var isVisible=!elements.statsPanel.classList.contains('hidden');elements.statsPanel.classList.toggle('hidden');elements.statsBtn.textContent=isVisible?'📊 통계 보기':'📊 통계 숨기기';if(!isVisible)updateStats()}
+        
+        function updateStats(){var total=teachers.length,completed24=0,completed25=0,inProgress25=0;for(var i=0;i<teachers.length;i++){if(teachers[i].status24==='완료')completed24++;if(teachers[i].status25==='완료')completed25++;if(teachers[i].status25==='진행중')inProgress25++}var incomplete25=total-completed25-inProgress25;var rate24=Math.round((completed24/43)*100);var rate25=total>0?Math.round((completed25/total)*100):0;document.getElementById('totalStat').textContent=total;document.getElementById('completed25Stat').textContent=completed25;document.getElementById('inProgress25Stat').textContent=inProgress25;document.getElementById('incomplete25Stat').textContent=incomplete25;document.getElementById('rate24Stat').textContent=rate24+'%';drawMainChart(completed25,inProgress25,incomplete25,rate25)}
+        
+        function drawMainChart(completed,inProgress,incomplete,rate){var canvas=document.getElementById('mainChart');if(!canvas)return;var ctx=canvas.getContext('2d');var centerX=130;var centerY=130;var outerRadius=100;var innerRadius=45;var total=completed+inProgress+incomplete;if(total===0)total=1;ctx.clearRect(0,0,canvas.width,canvas.height);var colors=['#22c55e','#eab308','#9ca3af'];var values=[completed,inProgress,incomplete];var labels=['완료','진행중','미완료'];var startAngle=-Math.PI/2;for(var i=0;i<values.length;i++){var sliceAngle=(values[i]/total)*2*Math.PI;if(values[i]>0){ctx.beginPath();ctx.arc(centerX,centerY,outerRadius,startAngle,startAngle+sliceAngle);ctx.arc(centerX,centerY,innerRadius,startAngle+sliceAngle,startAngle,true);ctx.closePath();ctx.fillStyle=colors[i];ctx.fill();var midAngle=startAngle+sliceAngle/2;var labelRadius=outerRadius+20;var labelX=centerX+Math.cos(midAngle)*labelRadius;var labelY=centerY+Math.sin(midAngle)*labelRadius;ctx.fillStyle=colors[i];ctx.font='bold 11px sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(labels[i],labelX,labelY)}startAngle+=sliceAngle}ctx.beginPath();ctx.arc(centerX,centerY,innerRadius,0,2*Math.PI);ctx.fillStyle='#ffffff';ctx.fill();ctx.fillStyle='#f97316';ctx.font='bold 42px sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(rate+'%',centerX,centerY-5);ctx.fillStyle='#9ca3af';ctx.font='13px sans-serif';ctx.fillText('이수율',centerX,centerY+22)}
+        
+        function exportToCSV(){var headers=['연번','교사명','24학년도 이수여부','25학년도 이수여부'];var csvData=[headers.join(',')];for(var i=0;i<teachers.length;i++){var teacher=teachers[i];var row=[teacher.id,teacher.name,teacher.status24||'',teacher.status25||''];csvData.push(row.join(','))}var csvContent=csvData.join('\n');var blob=new Blob(['\ufeff'+csvContent],{type:'text/csv;charset=utf-8;'});var link=document.createElement('a');link.href=URL.createObjectURL(blob);link.download='연수현황조사.csv';link.click()}
+        
+        document.addEventListener('DOMContentLoaded',function(){initializeData();setupEventListeners();renderTable();updateStats()});
+    </script>
+</body>
+</html>
